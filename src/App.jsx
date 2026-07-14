@@ -1,7 +1,10 @@
 import { useEffect, useState, useMemo } from "react";
+import { Routes, Route, Link } from "react-router-dom";
+import BreweryDetail from "./components/BreweryDetail";
+import Charts from "./components/Charts";
 import "./App.css";
 
-function App() {
+function Dashboard() {
   const [breweries, setBreweries] = useState([]);
   const [stateSearch, setStateSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -27,9 +30,6 @@ function App() {
     setLoading(false);
   };
 
-
-  // Only API call now
-  // Runs once on page load AND whenever stateSearch changes
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchBreweries(stateSearch);
@@ -39,117 +39,79 @@ function App() {
   }, [stateSearch]);
 
 
-  // Client-side filter
   const filteredBreweries = useMemo(() => {
-    if (typeFilter === "all") {
-      return breweries;
-    }
+    if (typeFilter === "all") return breweries;
 
     return breweries.filter(
       (brewery) => brewery.brewery_type === typeFilter
     );
-
   }, [breweries, typeFilter]);
 
 
-  // Statistics
-  const totalBreweries = useMemo(() => {
-    return breweries.length;
-  }, [breweries]);
-
+  const totalBreweries = useMemo(
+    () => filteredBreweries.length,
+    [filteredBreweries]
+  );
 
   const citiesRepresented = useMemo(() => {
     return new Set(
-      breweries.map((brewery) => brewery.city)
+      filteredBreweries.map((brewery) => brewery.city)
     ).size;
-
-  }, [breweries]);
-
+  }, [filteredBreweries]);
 
   const breweryTypes = useMemo(() => {
     return new Set(
-      breweries.map((brewery) => brewery.brewery_type)
+      filteredBreweries.map((brewery) => brewery.brewery_type)
     ).size;
+  }, [filteredBreweries]);
 
-  }, [breweries]);
-
-
-  // Get available brewery types for dropdown
   const availableTypes = useMemo(() => {
-    return [
-      ...new Set(
-        breweries.map((brewery) => brewery.brewery_type)
-      )
-    ];
+    return [...new Set(breweries.map((b) => b.brewery_type))];
   }, [breweries]);
-
 
   return (
     <div className="App">
-
       <h1>🍺 Brewery Explorer</h1>
 
+      <div className="controls">
+        <input
+          type="text"
+          placeholder="Search by State..."
+          value={stateSearch}
+          onChange={(e) => setStateSearch(e.target.value)}
+        />
 
-      {/* Server-side search */}
-      <input
-        type="text"
-        placeholder="Search by State..."
-        value={stateSearch}
-        onChange={(e) => setStateSearch(e.target.value)}
-      />
+        <select
+          value={typeFilter}
+          onChange={(e) => setTypeFilter(e.target.value)}
+        >
+          <option value="all">All Brewery Types</option>
 
-
-      {/* Client-side filter */}
-      <select
-        value={typeFilter}
-        onChange={(e) => setTypeFilter(e.target.value)}
-      >
-
-        <option value="all">
-          All Brewery Types
-        </option>
-
-        {availableTypes.map((type) => (
-          <option key={type} value={type}>
-            {type}
-          </option>
-        ))}
-
-      </select>
-
-
-      <div className="stats">
-
-        <p>Total Breweries: {totalBreweries}</p>
-
-        <p>
-          Cities Represented: {citiesRepresented}
-        </p>
-
-        <p>
-          Brewery Types: {breweryTypes}
-        </p>
-
+          {availableTypes.map((type) => (
+            <option key={type} value={type}>
+              {type}
+            </option>
+          ))}
+        </select>
       </div>
 
+      <div className="stats">
+        <p>Total Breweries: {totalBreweries}</p>
+        <p>Cities Represented: {citiesRepresented}</p>
+        <p>Brewery Types: {breweryTypes}</p>
+      </div>
 
+      {/* Charts */}
+      <Charts breweries={filteredBreweries} />
 
       {loading ? (
-
         <h2>Loading...</h2>
-
       ) : filteredBreweries.length === 0 ? (
-
         <h2>No breweries found.</h2>
-
       ) : (
-
         <div className="table-container">
-
           <table className="brewery-table">
-
             <thead>
-
               <tr>
                 <th>Name</th>
                 <th>Type</th>
@@ -158,41 +120,24 @@ function App() {
                 <th>Country</th>
                 <th>Website</th>
               </tr>
-
             </thead>
 
-
             <tbody>
-
               {filteredBreweries.map((brewery) => (
-
                 <tr key={brewery.id}>
-
                   <td>
-                    {brewery.name}
+                    <Link to={`/brewery/${brewery.id}`}>
+                      {brewery.name}
+                    </Link>
                   </td>
 
-                  <td>
-                    {brewery.brewery_type}
-                  </td>
+                  <td>{brewery.brewery_type}</td>
+                  <td>{brewery.city}</td>
+                  <td>{brewery.state_province}</td>
+                  <td>{brewery.country}</td>
 
                   <td>
-                    {brewery.city}
-                  </td>
-
-                  <td>
-                    {brewery.state_province}
-                  </td>
-
-                  <td>
-                    {brewery.country}
-                  </td>
-
-
-                  <td>
-
                     {brewery.website_url ? (
-
                       <a
                         href={brewery.website_url}
                         target="_blank"
@@ -200,26 +145,26 @@ function App() {
                       >
                         Visit
                       </a>
-
                     ) : (
                       "—"
                     )}
-
                   </td>
-
                 </tr>
-
               ))}
-
             </tbody>
-
           </table>
-
         </div>
-
       )}
-
     </div>
+  );
+}
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<Dashboard />} />
+      <Route path="/brewery/:id" element={<BreweryDetail />} />
+    </Routes>
   );
 }
 
